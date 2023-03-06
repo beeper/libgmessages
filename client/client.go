@@ -1,6 +1,7 @@
 package client
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -21,10 +22,19 @@ type Client struct {
 }
 
 func New() *Client {
+	transport := &http.Transport{
+		Proxy:           http.ProxyFromEnvironment,
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	if err := http2.ConfigureTransport(transport); err != nil {
+		panic(err)
+	}
+
 	return &Client{
 		http: &http.Client{
 			Timeout:   30 * time.Second,
-			Transport: &http2.Transport{},
+			Transport: transport,
 		},
 	}
 }
