@@ -1,3 +1,9 @@
+# Traffic Capturing
+
+To capture the traffic of the test programs set the `http_proxy` environment
+variable to your proxy server. Note that the value should be `http://host:port`,
+if it's https, it won't work.
+
 # Basics
 
 Each request contains the `RequestHeader` message. This message has a number of
