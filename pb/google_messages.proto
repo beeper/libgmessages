@@ -1,0 +1,372 @@
+
+syntax = "proto2";
+
+// Hand coded protobuf based on reverse engineering the web interface of google messages.  Internally called Bugle or DITTO or something.
+// Generally uses https://instantmessaging-pa.googleapis.com/$rpc/google.internal.communications.instantmessaging.v1.Pairing/ or https://instantmessaging-pa.googleapis.com/$rpc/google.internal.communications.instantmessaging.v1.Messaging/ for all the comms
+
+// When sending/receiving JSON, the bytes values are sent base64 encoded
+
+// Looks pretty similar to https://github.com/avaidyam/GoogleAPIProtobufs/blob/master/google.internal.communications.instantmessaging.v1.proto 
+// dont seem to quite line up though
+
+// Registration:
+// not used any more?
+
+message RegisterRefreshResponse {
+	optional ResponseHeader header = 1;
+	optional AuthToken auth_token = 2;
+	optional bool retry_with_server_timestamp = 3;
+	optional int64 server_timestamp = 4;
+}
+
+message RegisterRefreshRequest {
+	optional RequestHeader header = 1;
+	optional SenderId id = 2;
+	optional int64 issued_at = 3;
+	optional bytes signature = 4;
+}
+
+// Pairing:
+
+message RegisterPhoneRelayResponse {
+	optional ResponseHeader header = 1;
+	optional SenderId temp_id = 2;
+	optional bytes retrieval_token = 3;
+	optional int64 retrieval_token_ttl = 4;
+	optional AuthToken temp_auth_token = 5;
+	optional bytes registration_id = 6;
+}
+
+message RegisterPhoneRelayRequest {
+	optional RequestHeader header = 1;
+	//optional DeviceInfo device_info = 3; //bytes pairing_payload
+	optional bytes pairing_payload = 3; //DeviceInfo
+	optional RegisterData register_data = 4;
+}
+
+message RegisterData {
+	optional PublicKey public_key = 6;
+}
+
+message PublicKey {
+	optional int32 type = 1;
+	optional bytes key = 2;
+}
+
+message DeviceInfo {
+	optional string user_agent = 1;
+	optional int64 type = 2; //something?
+	optional string os = 3;
+}
+
+message GetWebEncryptionKeyRequest {
+	optional RequestHeader header = 1;
+}
+
+message GetWebEncryptionKeyResponse {
+	optional ResponseHeader header = 1;
+	optional bytes encryption_key = 2;
+}
+
+message RefreshPhoneRelayResponse {
+	optional ResponseHeader header = 1;
+	optional bytes retrieval_token = 2;
+	optional int64 retrieval_token_ttl = 3;
+}
+
+message RefreshPhoneRelayRequest {
+	optional RequestHeader header = 1;
+}
+
+message ResponseHeader {
+	optional uint64 rpc_global_id = 2;
+	optional int64 txn_timestamp_usec = 4;
+}
+
+message AuthToken {
+	optional bytes payload = 1;
+	optional int64 expires_in = 2;
+}
+
+
+
+// Messaging:
+
+// Content-Type: application/json+protobuf
+
+message ReceiveMessagesResponse {
+	repeated Message messages = 1;
+	// continue = 15?
+}
+
+message RequestHeader {
+	optional string id = 1;
+	optional string app = 3;
+	//optional string user_agent = 4;
+	optional bytes auth_token_payload = 6;
+	optional ClientInfo client_info = 7;
+	//optional string as_app = 8;
+	//optional bytes request_id_binary = 9;
+	//optional bytes routing_cookie = 102;
+}
+
+enum PlatformType {
+	PLATFORM_TYPE_UNKNOWN = 0;
+	ANDROID = 1;
+	IOS = 2;
+	PROBER = 3;
+	TEST = 4;
+	DESKTOP = 6;
+}
+
+message ClientInfo {
+	//optional string name = 1;
+	//optional string platform = 2;
+	optional int32 major = 3;
+	optional int32 minor = 4;
+	optional int32 point = 5;
+	// optional string details = 6;
+	optional int32 api_version = 7; //4
+	//optional type node = 8;
+	optional PlatformType platform_type = 9;
+}
+
+message ReceiveMessagesRequest {
+	optional RequestHeader header = 1;
+}
+
+//GIMAckMessagesRequest
+message AckMessagesRequest {
+	optional RequestHeader header = 1;
+	// repeated TODO message_ids = 2;
+	optional bool not_registered = 3;
+	// repeated messages = 4; {
+	// 		string message id = 1;
+	// 		sender = 2;
+	//}
+	// delay_ack = 5;
+	// delay = 6;
+}
+
+//GIMAckMessagesResponse
+message AckMessagesResponse {
+	optional ResponseHeader header = 1;
+}
+
+//GIMInboxSendRequest
+message SendMessageRequest {
+	optional SenderId dest_id = 1;
+	optional InboxMessage message = 2;
+	optional RequestHeader header = 3;
+	optional int64 time_to_live = 5;
+	optional SenderId send_as = 7;
+	//routing_cookie = 8;
+	//dest_registration_ids_array = 9;
+}
+
+//GIMReceiveMessagesResponse
+message Message {
+	//optional GIMReceiveMessagesResponse_Header header = 1;
+	
+	// oneof:
+	optional StartOfBatchMessage start_of_batch = 4;
+	optional EndOfBatchMessage end_of_batch = 5;
+	optional PongMessage pong = 3;
+	optional InboxMessage inbox_message = 2;
+	//optional GIMReceiveMessagesResponse_RefreshResult refresh_result = 6;
+}
+
+message StartOfBatchMessage {
+	optional int32 count = 1;
+}
+
+message EndOfBatchMessage {
+
+}
+
+message PongMessage {
+
+}
+
+
+
+
+message InboxMessage {
+
+	enum MessageType {
+		MESSAGE_TYPE_UNKNOWN = 0;
+		MESSAGE_ACK = 1;
+		FIREBALL = 2;
+		TACHYON = 3;
+		BASIC = 4;
+		GROUP = 5;
+		DEPRECATED_CALL_CONTROLLER = 6;
+		USERDATA = 7;
+		MESSAGE_RECEIPT = 8;
+		SECURE = 9;
+		PREKEY_SECURE = 10;
+		RCS_MESSAGE = 11;
+		SYSTEM_MESSAGE = 12;
+		DITTO = 19;
+	}
+
+	enum MessageClass {
+		USER = 0;
+		SIGNALING = 1;
+		EPHEMERAL = 2;
+		STATUS = 3;
+		NOTIFY = 4;
+	}
+	
+	optional string message_id = 1;
+	optional MessageType message_type = 2;
+	optional int64 timestamp = 3;
+	optional MessageClass message_class = 5;
+	optional int64 expired_at = 6;
+	optional int64 age = 7;
+	optional SenderId sender_id = 8;
+	optional SenderId receiver_id = 9;
+	//optional SenderId group_id = 10;
+	//optional InboxMessageMessage message = 12; // sent as bytes for json
+	optional bytes message = 12; // sent as base64 for json
+	//original_message_id = 14;
+	//group_size = 15;
+	//from_same_user = 16;
+	optional bytes sender_registration_id = 17;
+	//spam_evaluation = 18;
+	//push_notification = 19;
+	//violation = 20;
+	optional string server_message_id = 21;
+	//in_spam_sync_path = 22;
+}
+
+message SendMessageResponse {
+	optional ResponseHeader header = 1;
+	optional int64 timestamp = 2;
+}
+
+// used when sending
+message InboxMessageMessage {
+	enum MessageType {
+		SMS = 2;
+		RCS = 3;
+		TYPING = 12;  // sent every 5 seconds, with ephermal class
+		FOCUS = 22;
+	}
+
+	optional bytes content_id = 1;  //maybe who we're receiving from?
+	optional MessageType type = 2;
+	optional UnencodedMessage message = 3;
+	optional bytes text_encoded = 5;
+	optional bytes contact_id = 6;  //maybe who we're sending to?
+}
+
+message UnencodedMessage {
+	// = 2;  "4" for rcs, 1 for focus, "29" for sms
+
+ //RCS:
+  // 2: "4"
+  // 3 {
+    // 1: "tmp_308227807718"
+    // 12: "tmp_308227807718"
+    // 9: "3"
+    // 6 {
+      // 1 {
+        // 1: "a"
+      // }
+    // }
+    // 7: "4"
+    // 10 { //repeating
+      // 2 {
+        // 1: "a"
+      // }
+    // }
+	// 10 {
+      // 3 {
+        // 1: 1
+        // 2: "8de038c5-9ffc-4809-bb6a-98d18c706f7a/143AAXaFriLYoinqCTYR2Vyiw" // comes back from upload to https://instantmessaging-pa.googleapis.com/upload?upload_id=ADPycduCT7mI_lZqjX6cSsDlmSo1t6wqBAmkbzGz7gU94ajga0GfNREY-NPTvQKABOhCprciTwLZDrC2ligG_KTzBAFNqQEwgw&upload_protocol=resumable
+        // 4: "turnip-100.jpg"
+        // 5: 4436
+        // 11: "jK\330\321\375\371DOn\r\224\2325\302\206_\366\237r\033+o\000\224PFJ\313\245\315\366\346"
+      // }
+    // }
+  // }
+  // 5: "tmp_308227807718"
+  
+  //Upload, POST to https://instantmessaging-pa.googleapis.com/upload with a ImageUploadRequest as base64 data
+  // returns X-Goog-Upload-URL of URl to post image data to
+  // POST image data to the new url, get back an ImageUploadResponse as base64
+  
+ //SMS:
+  // 2: "29"
+  // 3 {
+    // 1: "tmp_967948250872"
+    // 12: "tmp_967948250872"
+    // 9: "3"
+    // 6 {
+      // 1 {
+        // 1: "te"
+      // }
+    // }
+    // 7: "29"
+    // 10 {
+      // 2 {
+        // 1: "te"
+      // }
+    // }
+  // }
+  // 5: "tmp_967948250872"
+  
+  //TYPING:
+  // 2 {
+    // 1: "4"
+    // 3: 1
+  // }
+}
+
+message InboxMessageEncryptedIncoming {
+	optional bytes sender_id = 1;
+	optional int64 timestamp = 3;
+	//optional int32 unknown_enum = 4;  //3, 16
+	//optional int32 unknown_enum = 6; // might be 1 for 'outgoing'
+	//optional int32 unknown_enum = 7;
+	optional bytes text_encoded = 8;
+	
+}
+//TCLIncomingMessage ?
+
+message ImageUploadRequest {
+	//optional int32 something = 1;
+	optional RequestHeader header = 2;
+	optional SenderId sender_id = 3;
+}
+
+message ImageUploadResponse {
+	// 1 {
+  // 1: "8de038c5-9ffc-4809-bb6a-98d18c706f7a/143AAXaFriLYoinqCTYR2Vyiw"
+  // 2: 1
+// }
+// 2: ""
+}
+
+
+//aka GIMId
+// might be "ParticipantId"
+message SenderId {
+	enum SenderType {
+		SENDER_TYPE_UNKNOWN = 0;
+		PHONE_NUMBER = 1;
+		GROUP_ID = 2;
+		FIREBALL_BOT = 3;
+		CALL_CONTROLLER = 4;
+		SUGGESTER = 5;
+		FI_ID = 6;
+		SYSTEM = 7;
+		
+		DEVICE_ID = 13;
+		DITTO = 15;
+	}
+	optional SenderType type = 1;
+	optional string id = 2;
+	optional string app = 3;
+}
