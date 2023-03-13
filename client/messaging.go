@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"net/http"
 
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/beeper/libgmessages/pblite"
 )
 
 func (client *Client) messagingHeaders() http.Header {
@@ -27,7 +28,7 @@ func (client *Client) messagingHeaders() http.Header {
 }
 
 func (client *Client) messagingRequest(message proto.Message, endpoint string) (*http.Request, error) {
-	rawBody, err := protojson.Marshal(message)
+	rawBody, err := pblite.Marshal(message)
 	if err != nil {
 		return nil, err
 	}
